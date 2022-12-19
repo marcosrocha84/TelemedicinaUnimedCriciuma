@@ -4,7 +4,7 @@
 #-------------------------------------------------------------------#
 # Autor.: Marcos Rocha                                              #
 # Data..: 19/12/2022                                                #    
-# Versão: 1.1                                                       #
+# Versão: 1.2                                                       #
 #-------------------------------------------------------------------#
 import PySimpleGUI as sg
 import textwrap
@@ -142,7 +142,13 @@ def main():
                         ]
 
     layoutPrincipal = layoutPrincipal = [[sg.Sizer(0,1366), sg.Column([[sg.Sizer(768,0)]] + layoutPrincipal, element_justification='c', pad=(0,0))]]
-    janelaPrincipal = sg.Window('Telemedicina Unimed Criciúma', layoutPrincipal, disable_close=True, disable_minimize=True, no_titlebar=True ,finalize=True)
+    janelaPrincipal = sg.Window('Telemedicina Unimed Criciúma', 
+                                layoutPrincipal, 
+                                disable_close=True, 
+                                disable_minimize=True, 
+                                no_titlebar=True,
+                                finalize=True,
+                                right_click_menu=sg.MENU_RIGHT_CLICK_EXIT)
     janelaPrincipal.maximize()
 
     #Loop principal
