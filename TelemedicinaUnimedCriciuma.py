@@ -3,7 +3,7 @@
 ##### Aplicação para autoatendimento dos totens de Telemedicina #####
 #-------------------------------------------------------------------#
 # Autor.: Marcos Rocha                                              #
-# Data..: 14/12/2022                                                #    
+# Data..: 19/12/2022                                                #    
 # Versão: 1.1                                                       #
 #-------------------------------------------------------------------#
 import PySimpleGUI as sg
@@ -14,13 +14,50 @@ import time
 import psutil as ps
 import webbrowser as wb
 #-------------------------------------------------------------------
-URL_CHAT = 'https://unimedcriciuma.syngoo-talk.app/webchat/v2/?cid=63247b5ebae605001985770a&host=https://unimedcriciuma.syngoo-talk.app'
+#URL_CHAT = 'https://unimedcriciuma.syngoo-talk.app/webchat/v2/?cid=63247b5ebae605001985770a&host=https://unimedcriciuma.syngoo-talk.app'
+URL_CHAT = 'https://unimedcriciuma.syngoo-talk.app/webchat/v2/?cid=63247b5ebae605001985770a'
+START_CHROME = "powershell -WindowStyle Hidden Start-Process chrome.exe -ArgumentList @( '-incognito', '" + URL_CHAT + "' )"
 WIN_MARGIN = 60
 #-------------------------------------------------------------------
-WIN_COLOR = "#033c1e"
+FUNDO_VERDE = "#033c1e"
+FUNDO_CINZA = "#363636"
 TEXT_COLOR = "#ffffff"
 TEMPO_CONFIRMAR_FINALIZAR = 60000 # 1 minuto
 TEMPO_TOTAL_ATENDIMENTO = 1800 * 1000 #30 minutos
+ICONE_INICIANDO = b'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAA3NCSVQICAjb4U/gAAAACXBIWXMAAAEKAAABCgEWpLzLAAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAAAHJQTFRF////ZsxmbbZJYL9gZrtVar9VZsJcbMRYaMZVasFYaL9XbMFbasRZaMFZacRXa8NYasFaasJaasFZasJaasNZasNYasJYasJZasJZasJZasJZasJZasJYasJZasJZasJZasJZasJaasJZasJZasJZasJZ2IAizQAAACV0Uk5TAAUHCA8YGRobHSwtPEJJUVtghJeYrbDByNjZ2tvj6vLz9fb3/CyrN0oAAADnSURBVDjLjZPbWoUgFIQnbNPBIgNKiwwo5v1fsQvMvUXI5oqPf4DFOgCrhLKjC8GNVgnsJY3nKm9kgTsduVHU3SU/TdxpOp15P7OiuV/PVzk5L3d0ExuachyaTWkAkLFtiBKAqZHPh/yuAYSv8R7XE0l6AVXnwBNJUsE2+GMOzWL8k3OEW7a/q5wOIS9e7t5qnGExvF5Bvlc4w/LEM4Abt+d0S5BpAHD7seMcf7+ZHfclp10TlYZc2y2nOqc6OwruxUWx0rDjNJtyp6HkUW4bJn0VWdf/a7nDpj1u++PBOR694+Ftj/8PKNdnDLn/V8YAAAAASUVORK5CYII='
+#-------------------------------------------------------------------
+def display_notification(message):
+    title = 'Telemedicina Unimed Criciúma'
+    alpha = 0.9
+    message = textwrap.fill(message, 50)
+    win_msg_lines = message.count("\n") + 1
+    screen_res_x, screen_res_y = sg.Window.get_screen_size()
+    win_margin = WIN_MARGIN  # distance from screen edges
+    win_width, win_height = 370, 66 + (14.8 * win_msg_lines)
+    win_location = (199, screen_res_y/2 - win_height - win_margin)
+
+    layout = [[sg.Graph(canvas_size=(win_width, win_height), graph_bottom_left=(0, win_height), graph_top_right=(win_width, 0), key="-GRAPH-", background_color=FUNDO_CINZA, enable_events=True)]]
+
+    window = sg.Window(title, layout, background_color=FUNDO_CINZA, no_titlebar=True, location=win_location, keep_on_top=True, alpha_channel=0, margins=(0, 0), element_padding=(0, 0), finalize=True)
+    window["-GRAPH-"].draw_rectangle((win_width, win_height), (-win_width, -win_height), fill_color=FUNDO_CINZA, line_color=FUNDO_CINZA)
+    window["-GRAPH-"].draw_text(title, location=(64, 20), color=TEXT_COLOR, font=("Arial", 12, "bold"), text_location=sg.TEXT_LOCATION_TOP_LEFT)
+    window["-GRAPH-"].draw_text(message, location=(64, 44), color=TEXT_COLOR, font=("Arial", 9), text_location=sg.TEXT_LOCATION_TOP_LEFT)
+    window["-GRAPH-"].draw_image(data=ICONE_INICIANDO, location=(20, 20))
+    
+    for i in range(1,int(alpha*100)):               # fade in
+        window.set_alpha(i/100)
+        event, values = window.read(timeout=10)
+        if event != sg.TIMEOUT_KEY:
+            window.set_alpha(1)
+            break
+    event, values = window(timeout=3000)
+    if event == sg.TIMEOUT_KEY:
+        for i in range(int(alpha*100),1,-1):       # fade out
+            window.set_alpha(i/100)
+            event, values = window.read(timeout=10)
+            if event != sg.TIMEOUT_KEY:
+                break
+    window.close()
 #-------------------------------------------------------------------
 class abreNavegador(threading.Thread):
     def __init__(self):
@@ -30,7 +67,8 @@ class abreNavegador(threading.Thread):
         self.close
 
     def run(self):
-        navegador = wb.open_new(URL_CHAT)
+        #navegador = wb.open(URL_CHAT,1,True)
+        navegador = system(START_CHROME)
 #-------------------------------------------------------------------
 def fecha_navegador():
     lista = []
@@ -54,16 +92,15 @@ def encerrar_atendimento():
     win_margin = WIN_MARGIN
     win_width, win_height = 364, 66 + (14.8 * win_msg_lines)
     win_location = (win_width - win_margin, win_height - win_margin)
+    largura, altura = sg.Window.get_screen_size()
 
     layout =[  
-                [sg.Graph(canvas_size=(259, 1), graph_bottom_left=(0, win_height), graph_top_right=(win_width, 0), key="-GRAPH-", background_color=WIN_COLOR, enable_events=True)],
-                [sg.Button('ENCERRAR', image_data=imagemBotaoVermelho, font='Helvetica 20 bold italic', button_color=('white', WIN_COLOR),border_width=0, )]
+                [sg.Graph(canvas_size=(largura, 12), graph_bottom_left=(0, win_height), graph_top_right=(win_width, 0), key="-GRAPH-", background_color=FUNDO_VERDE, enable_events=True)],
+                [sg.Button('ENCERRAR', image_data=imagemBotaoVermelho, font='Helvetica 30 bold italic', button_color=('white', FUNDO_VERDE),border_width=0, )]
             ]
 
-    notificacao = sg.Window('', layout, background_color=WIN_COLOR, no_titlebar=True, location=win_location, keep_on_top=True, alpha_channel=0, margins=(0, 0), element_padding=(0, 0), finalize=True)
-    notificacao["-GRAPH-"].draw_rectangle((win_width, win_height), (-win_width, -win_height), fill_color=WIN_COLOR, line_color=WIN_COLOR)
-    
-    time.sleep(1)
+    notificacao = sg.Window('', layout, background_color=FUNDO_VERDE, no_titlebar=True, location=(0,0), keep_on_top=True, alpha_channel=0, margins=(0, 0), element_padding=(0, 0), finalize=True)
+    notificacao["-GRAPH-"].draw_rectangle((0, 0), (-win_width, -win_height), fill_color=FUNDO_VERDE, line_color=FUNDO_VERDE)
     notificacao.set_alpha(100)
     encerrarAtendimento = False
 
@@ -92,7 +129,7 @@ def main():
                             [sg.Text(' ')],                                      
                             [sg.Text(' ')], 
                             [sg.Text(' ')],                                      
-                            [sg.Button('Iniciar Atendimento', image_data=imagemBotaoVerde, font='Helvetica 18 bold italic', button_color=('white', sg.theme_background_color()),border_width=0, )],
+                            [sg.Button('Iniciar Atendimento', image_data=imagemBotaoVerde, font='Helvetica 22 bold italic', button_color=('white', sg.theme_background_color()),border_width=0, )],
                             [sg.Text(' ')],   
                             [sg.Text(' ')],   
                             [sg.Text(' ')], 
@@ -111,15 +148,16 @@ def main():
     #Loop principal
     while True:
         event, values = janelaPrincipal.read()
-
+        
         if event == sg.WIN_CLOSED or event == 'Exit':
             break
 
         if event == 'Iniciar Atendimento':            
             background = abreNavegador()
             background.start()
-            
+            display_notification('Iniciando Atendimento...')
             continuar = True
+
             #Loop do atendimento iniciado
             while continuar:
                 
@@ -130,18 +168,18 @@ def main():
                     win_msg_lines = message.count("\n") 
                     screen_res_x, screen_res_y = sg.Window.get_screen_size()
                     win_width, win_height = 520, 66 + (20 * win_msg_lines)
-                    win_location = (screen_res_x /2.5 - win_height, screen_res_y /2.5)
+                    win_location = (62, screen_res_y /2.5)
 
                     layout = [  
-                                [sg.Graph(canvas_size=(win_width, win_height), graph_bottom_left=(0, win_height), graph_top_right=(win_width, 0), key="-GRAPH-", background_color=WIN_COLOR, enable_events=True)],
-                                [sg.Graph(canvas_size=(win_width, win_height + 50), graph_bottom_left=(0, win_height), graph_top_right=(win_width, 0), key="-GRAPH2-", background_color=WIN_COLOR, enable_events=True)],
-                                [sg.Button('Continuar', image_data=imagemBotaoVerde, font='Helvetica 20 bold italic', button_color=('white', WIN_COLOR),border_width=0)] + 
-                                [sg.Button('Finalizar', image_data=imagemBotaoVermelho, font='Helvetica 20 bold italic', button_color=('white', WIN_COLOR),border_width=0, )]
+                                [sg.Graph(canvas_size=(win_width, win_height), graph_bottom_left=(0, win_height), graph_top_right=(win_width, 0), key="-GRAPH-", background_color=FUNDO_VERDE, enable_events=True)],
+                                [sg.Graph(canvas_size=(win_width, win_height + 50), graph_bottom_left=(0, win_height), graph_top_right=(win_width, 0), key="-GRAPH2-", background_color=FUNDO_VERDE, enable_events=True)],
+                                [sg.Button('Continuar', image_data=imagemBotaoVerde, font='Helvetica 30 bold italic', button_color=('white', FUNDO_VERDE),border_width=0)] + 
+                                [sg.Button('Finalizar', image_data=imagemBotaoVermelho, font='Helvetica 30 bold italic', button_color=('white', FUNDO_VERDE),border_width=0, )]
                             ]
 
-                    notificacao = sg.Window(title, layout, background_color=WIN_COLOR, no_titlebar=True, location=win_location, keep_on_top=True, alpha_channel=0, margins=(0, 0), element_padding=(0, 0), finalize=True)
-                    notificacao["-GRAPH-"].draw_rectangle((win_width, win_height), (-win_width, -win_height), fill_color=WIN_COLOR, line_color=WIN_COLOR)
-                    notificacao["-GRAPH-"].draw_text(title, location=(264, 20), color=TEXT_COLOR, font=("Helvetica 12"), text_location=sg.TEXT_LOCATION_CENTER)
+                    notificacao = sg.Window(title, layout, background_color=FUNDO_VERDE, no_titlebar=True, location=win_location, keep_on_top=True, alpha_channel=0, margins=(0, 0), element_padding=(0, 0), finalize=True)
+                    notificacao["-GRAPH-"].draw_rectangle((win_width, win_height), (-win_width, -win_height), fill_color=FUNDO_VERDE, line_color=FUNDO_VERDE)
+                    notificacao["-GRAPH-"].draw_text(title, location=(320, 20), color=TEXT_COLOR, font=("Helvetica 12"), text_location=sg.TEXT_LOCATION_CENTER)
                     notificacao["-GRAPH2-"].draw_text('O atendimento atingiu o tempo máximo de 30 minutos.\n\nPor gentileza, escolha uma das opções abaixo', location=(264, 20), color=TEXT_COLOR, font=("Arial", 15, "bold"), text_location=sg.TEXT_LOCATION_CENTER)
                     notificacao.set_alpha(100)
 
@@ -151,23 +189,29 @@ def main():
                         break
                         
                     if event[0] == 'Finalizar':                                        
-                        notificacao.close()
                         continuar = False                    
+                        display_notification('Finalizando Atendimento...')
+                        notificacao.close()
                         fecha_navegador()
-                
+
                     if event[0] == 'Continuar':
                         notificacao.set_alpha(0)
                         continue
 
                     if event[0] == sg.TIMEOUT_KEY:                    
                         continuar = False
+                        display_notification('Encerrando Atendimento...')
                         notificacao.close()
                         fecha_navegador()
+                        
                 else:
+                    display_notification('Encerrando Atendimento...')
                     continuar = False
                     fecha_navegador()
+                    
 # -------------------------------------------------------------------
 if __name__ == '__main__':    
-    imagemBotaoVerde = b'iVBORw0KGgoAAAANSUhEUgAAAQMAAAAwCAYAAAAVSB98AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAO+SURBVHhe7d3dclNVGAbgd+00Qmn+mrRN/AFbIhByBY4cqeOMzOhggEO9ht6Cp3oE18ApfzMy6AyDnjm9AqZWSxFU0rRJmyYthDR7+e21VqrDcAX53qfzDmXvfbpf1rdWGwyCUqN23cT4GlFUDJeIaIJZYAeIb7TvrC4nf3dlMH+1brMfFjBdycGYlFw86ggimkDWfcV48byL3soutm4+MqbUqF/LXygszxRlQdBPAaPkUZYB0WSTdYG87siM0N/qYG+l852Zu1RrL1xdLKY6x2TFEPnniEiHKMaoOEDr5pOOmWvUbfnKIkxrSu5wRUCki4wLC4fYvPUErgwql5dgttLhJhFpYueHaN7eGJfBaWAzGSCISJ3ySMrgsS+D8uVFlgGRVlIGm7fDmFBOxgSWAZFK1pVBGBMWvnpfyoB7BkQa2fIQrbt/wp8lmuQUwTIMozHu/QdSJ87PfztTywN9HisSqZSJsb/aDSuDxBsKg2EYBQlcGVgrV15/gGEYFXHvv/Bjwrk8TI9jApFKGYuD37q+DE6cy7EMiJSy2VjKYM+PCcb9kZQBwzDa4t9/+S75OYO5L0/B/J3cICJt7LsW2z88HY8JeWCPZUCkUg44WDs6WvS7iUSkkX///ZjwxUngGVcGRCqdlDHh3jM/JkyflTGhG24QkS7y+r9Y2wt7BmdkaGAZEOmUlMHvoQymz2RZBkRauTLo+T2D2YvvIXrKTUQijeJTBjs//jU+TRBJFzAMoy+BHxM+kDFh939XiUgPGRNe/tEbl0FOyiDcICJdCsaVgdszKHz+DsxGHO4QkSZ2KcLuT/+EX1R6fYZgGEZN3PsvXBnE/HAThlEb9/4Lv2dQzQE7/gIR6WJmI7xcD3sG+c/eBtYPwy0iUqU6he6D5+MyqMCsc2VApJGtGimDph8TjlczQIdlQKRS0WDwuD8ugyzQ5tEikUqllCsDd5rAj0pnGL0Zf1T6f7+b8KanGIZREM9tIGY/rcCsDcMlItLEnk2j97DJlQHDMJ7bQHxraYYbiERK2VKEVxv7YUz4hGMCkVZuTPi56csg8/ECy4BIqaQM+r+0wphQzcBsj46OGIhIB2MMMD8VxoRLtfbMxUrRrB7CcHFApIpNS85PYf9+s2NKjfq14xfyy+lXcrU1AoayOuBeItFkS84R07IqKKcwiAYYrvS+d/+N0tyVuj32UUFmhjSikTw14rhANNFSBnEqxuhgiMGvu9i+9SgZGLxSo3Zd6uIbuTAbLhHRBJN/8ndkDLjRvrO6DAD/AopWIVyrRKv6AAAAAElFTkSuQmCC'
-    imagemBotaoVermelho = b'iVBORw0KGgoAAAANSUhEUgAAAQMAAAAwCAYAAAAVSB98AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsIAAA7CARUoSoAAAAN4SURBVHhe7dzdi1VVGMfx3z57N2vrjKVDXigYIZGiFIiCL+hczEA3/Qt24W0vDBUUJOgpVCywGsxuvdAL/wIvBL1IsYxCqhuDisCki3Lm+NLMbD17n9ZaZ28HNv4F5/l+4IHzdjs/nudZa0+S57mCbqK5fkcHk0ST8QMAo24hLXWuO9BseBPD4BNpcFBOG+L3AKz429d5FTrisyA5PpF/eajvZteHL1YX6mf+RRp+BmBklVLWlzYsOt3RQBeSR58mx8bzu4dLN3l7wgfBqvqHAEzIlqRND52Op8V86AwGH/Wd/lhT0BEA1vgOYfMDpxNZoZUweN6HAQBzNv/bCoNfJwkDwKIt860w+O05wgCw6KV77c6AMABM2tIOg1vsDACTtrZ3BrfWEQaARVsXhmGQzoxl3QNVpn/ysv4KgCXrlzNd7ZQrncEv7AwAk15p7wx+5mgRMOnV+mixU7+XBhRFmazak87gZriODMCcHe3ryDfXEgaARTt6rTD4kQUiYNLO9gLxB+4ZACbtqu8ZrCwQAZgWO4MPQmfAzgAwaVfP6TPfGcQbiFNVpr8cNxABi14oMl3rlMMxoe/racePFEWNfoW//yB2Bvt8Z3CHzgAwaaPvDK43zya833e68Sw7A8Ci3fedTjVHiyEMvmOBCJi0pzcMgydjwm3GBMCkTX5M+LZZIEbhFUVR9qoWx4T3/JhwbTVjAmDR/kWnz5udwawPg+s8tQiYtO+B01wTBu/6MLjKg0qASQfuOX3hwyBODHF12J4jKIoyUc3RQewM3vGdwTer6AwAi6aWnE43Y0IMA+4ZACZN9YZhEO8Z7K4y/ck9A8CkF4tM33dKwgCwrgmDOCa87ceEKzybAJg0fd/pq2ZnEMNgnDAALJr+bxgG4XBh+FxzQlGUyQoh4MXO4K3QGXC0CJg0veR0phkT3mRMAMwKY8LXTRiEzuDSBGEAWPTaw1ZncJmnFgGTZhaHnUG8Z7C3yvT7M6UGzSYBgAlJIr38ONONcM/g2Hh+98PSTV4cK7Ts6l8AMCH3A8Hrj5xOpsV8OuOyjduqbM9EmapXlap8UpT1cQNFUaNZaSk5HwTbH49pWYl+SsvTSZ7n+rijwaHKaa3/UdgcNP9HHcBoynyFQaDn62yn0NHKTwwhDIJuojnfHLzhX66LHwAYdQu+QzjXHWhWkv4HD+VJFubY6YoAAAAASUVORK5CYII='
+    #Botões Grandes
+    imagemBotaoVerde = b'iVBORw0KGgoAAAANSUhEUgAAAUYAAAA8CAYAAAAaGRPjAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAARXSURBVHhe7d3PcpNVGMfx5+RtFZq2SZsWqoMMCkibC3AcWbtgRsfJ6FKvobfgVldwDWxFFjqyYO/0BsSKoijDINL0b1oMJe/x/EvInzNeQJ/vh/llJu8btr95zjlvGiNJo7V6w5TyuVQqi+kSAKhgRXZEypvt25vr/n0oxuXPmnbu/bqcXpkXYwp3cdCXAHCi2fCvlOdP9uRgY1eefXPPmEareb12tb5eXXSDYqcQ6fmPUowAtHDzoqs+me1J59m27G9sf1VU15bv1N9bEWm7OyWFCEAHYyr+Nca6HBspzkzJ0U+7TX8nFCZTIgBNrC1H07OxLCuVxVCMYU/RlyMhhGjJhNSDTjGztvxldW1BpMPECECP3CGzqVrp/LwrcSk9UaWEEHKyY20m7o6XihEAtJksyxg3OS61mvZM64KYp1PhAgCoYGIJjjjbk6ffPkx7jKs1MR2GRwCa+D3G0dhqKYebgz1GAFDGuokxFydNjHVOpQFg1rqJcW9oYvRFSQghWvI/QjH6Y+rsfySEEE1J2GMEoFOmGMOQ6MQ9xis1MQfsMQJQbtbK0S97sRhnrsxTjAB0MZnOm4vFyFIagE7Dj+ik9L8UmIqRaREA+sJXApc+Pi/mMeUIQJHMUtq+WcrWd3/19xhrIvsUIwA9so03L3J0f7DHGNfVAKBFZotxgMMXABiI7Rj3GD96S+QRS2kAiuQq75yVre8fxT3G0+/WRPbSDQDQwA+H43FV+Pz+fjp8uTxPMQLQJfeAdypG9hgB6JQ7ffFx4lL68hwTIwD4ifHXgzgxhpIkhBDlSQNjPJVeuHZOKn+mKwCggM1sMdrzIjt3Hqel9CW3lN6lGAHo4X9w33fjcGzdyL+/cfgCQKmRH9pPcS/hXpoY593EGN4DgF5hYjyIxXjKLaXNDktpAIrknmMcKcaLFCMAbXznjcYuxGJkjxGATpO9GOOk5xjdu/GbhBCiLv4lHb74pbTshPcAoJZfSncfdFIxvuOLMTYlAGhgcocvqRjDN19qH74h8uBlugMAGmSK8WIhe3ef9A9f/LTYf/abEEI0ZLCxOJbhnzbI3SeEkBMbV47jSdLhy6xIu0yXAECB3B7jopHu7x2eYwSgVP+70cNJ0nOM/oUQQnSn341DE+PYJwghRF2isMf42tt+j7GXLgHAyZd9jrFRGdtjzJUnIYSc0NjSTsbfc1hKE0LIIFFaSld5XAeAetYtpV/8ccjjOgAwjmIEgDFxKX2hKoZTaQDa+aX0w8NXe4ymXUr4g7UAoFB4fKdRhGKMS+lK5nkeANAmdaFZ+mS1Xb22smg2X4o5DtcAQB077bI2JYc//L1tGq3m9VNXa+vTL9zVf3oix245zZM7ALTw6+ZpNymeLaRb6crxxsHXYW5c+rRpX/+gLsXMtFR67lM99hoBKFEYKYtSekfH0v1xV7Zu3Xv1ZcFGa/WGq84v3IWFdAkAVHCj4I5bKt9s395cFxH5DymOXcehSf6GAAAAAElFTkSuQmCC'    
+    imagemBotaoVermelho = b'iVBORw0KGgoAAAANSUhEUgAAAUYAAAA8CAYAAAAaGRPjAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAQ8SURBVHhe7d3Lax1lGMfx35xzGi+RoAUvFAqmiTlJpYgiNYtYmp1Lt4J27WURLwW1td4qYlHU4HVtF+JfIK4qWtGKilAwXppUEaubWhtKK21Pxud9Z96cnJkB9+f5fg5P2sxk/eN53vedOZlKBzS22FPv/kz55vISADiRnWmpffigVhfib+HH8xrL79MWjWukuAAAzqzooj7UKcvD1Szbr9E392jrwg3q6S/7XLZ/FQsAPGirY3WTff5QSx/pz0PtXdr08b263tLyN61ZLEp58bcAMMSy2ACGvOvF7DuvC5q0LDyi09tb4Q+KKKRLBOBHbl3ixrpkP8NSYthnsVH66vwZTehnLRV/DQAOZBaGVV37vKgTWg/Gn/RjeQsAhp91huX/+qY0o5e0XATjszZZL1nPCAB+1JcPu5qOwRjXGAHAnzBKD1YrrjJaNxk6xv02Si/ZMA0AXoQYrJqxYTqsMa7vSlMURXmqcEinXuGOGKUB+FQNylRBHKX32Sj9A5svAJzbbqP0y2lXOgTjcYIRgCP1U4yVYHw6BiMHvAH40XTAe0cZjKwxAnApj1st1SrEjvGp2DHy5AsA33ZoWq+kUToE4/f6pbwFAMOvbR1iVQpGRmkALvViNA5WQjACQMX6KP0djwQCcKTpa1xuV3dwjfFbjusAcCRrGJjvKIMx3snXN6kBwIdca7VKWGMEgFJqEuMovVfbbJTmHCMAPzoNq4y32Sj9mlaKYHzSgvEYmy8AnLvLgvFQCsYnLBi/4SUSABxp+s6XFIysMQJwKXxZarXCN+sHsWN8XOPWMZ4oLwGAT3dqUq/rZBGMj1kwfk0wAnBupwXjG4PByOYLAE/q72OsBeMxNl8AONK0+bJT3RiMbL4AcKlp8yVZ7xi/4oA3AOdmNd0fpR+1YPyCF9UCcKSj+otqUzAySgNw6bJGapVWHQlGAE6FjrFahThKL8RRmuM6AHyb1ZTe1q/9YDzKi2oBODenGS2mzZdHdLO+pGME4EjTOcZaMB61XwDAj/6aYjKnSb2TRukiGHlWGoAn9UcC5zQ+GIyfM0oDcO5udQeD8TOelQbgSNMaYwpGzjECcOl/n5V+2DrGT+kYATi3W1N6N43SRTAul7cAwKfdmugH40MxGFfKWwAw/JrWGGvBeIS36wBwbl636L3BYKRjBODbvLb1g/HBGIwc8Abg27wm9b4FI8d1AKCCYASAig3BGA43UhRFea7ChjXG5YGT3wDgSTi+M6+J/hpjJ14GAN9SFmb7NHp6r8Y3f2IpeUH/lpcBwJerdKXusen5VZ38u71LI1tmNDY7qlGd1UVrJnOtxRPh1dmboihq+KpjnyssFG/VjdYc5jqus2+FO3pO1+R7tFXX2mQdovFSDEYAGH6bLBxHrP6xlvAD/a4XdC6LwRgc0NjimnoPSPl15SUAcCI701L78EGtLkjSf9vJqwmcV0HYAAAAAElFTkSuQmCC'
     main()
