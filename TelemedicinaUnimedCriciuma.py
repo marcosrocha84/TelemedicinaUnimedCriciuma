@@ -3,28 +3,33 @@
 ##### Aplicação para autoatendimento dos totens de Telemedicina #####
 #-------------------------------------------------------------------#
 # Autor.: Marcos Rocha                                              #
-# Data..: 19/12/2022                                                #    
-# Versão: 1.2                                                       #
+# Data..: 20/12/2022                                                #    
+# Versão: 1.3                                                       #
 #-------------------------------------------------------------------#
 import PySimpleGUI as sg
 import textwrap
 import threading
 from os import system
-import time
 import psutil as ps
 import webbrowser as wb
 #-------------------------------------------------------------------
-#URL_CHAT = 'https://unimedcriciuma.syngoo-talk.app/webchat/v2/?cid=63247b5ebae605001985770a&host=https://unimedcriciuma.syngoo-talk.app'
-URL_CHAT = 'https://unimedcriciuma.syngoo-talk.app/webchat/v2/?cid=63247b5ebae605001985770a'
-START_CHROME = "powershell -WindowStyle Hidden Start-Process chrome.exe -ArgumentList @( '-incognito', '" + URL_CHAT + "' )"
 WIN_MARGIN = 60
-#-------------------------------------------------------------------
 FUNDO_VERDE = "#033c1e"
 FUNDO_CINZA = "#363636"
 TEXT_COLOR = "#ffffff"
 TEMPO_CONFIRMAR_FINALIZAR = 60000 # 1 minuto
 TEMPO_TOTAL_ATENDIMENTO = 1800 * 1000 #30 minutos
 ICONE_INICIANDO = b'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAA3NCSVQICAjb4U/gAAAACXBIWXMAAAEKAAABCgEWpLzLAAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAAAHJQTFRF////ZsxmbbZJYL9gZrtVar9VZsJcbMRYaMZVasFYaL9XbMFbasRZaMFZacRXa8NYasFaasJaasFZasJaasNZasNYasJYasJZasJZasJZasJZasJZasJYasJZasJZasJZasJZasJaasJZasJZasJZasJZ2IAizQAAACV0Uk5TAAUHCA8YGRobHSwtPEJJUVtghJeYrbDByNjZ2tvj6vLz9fb3/CyrN0oAAADnSURBVDjLjZPbWoUgFIQnbNPBIgNKiwwo5v1fsQvMvUXI5oqPf4DFOgCrhLKjC8GNVgnsJY3nKm9kgTsduVHU3SU/TdxpOp15P7OiuV/PVzk5L3d0ExuachyaTWkAkLFtiBKAqZHPh/yuAYSv8R7XE0l6AVXnwBNJUsE2+GMOzWL8k3OEW7a/q5wOIS9e7t5qnGExvF5Bvlc4w/LEM4Abt+d0S5BpAHD7seMcf7+ZHfclp10TlYZc2y2nOqc6OwruxUWx0rDjNJtyp6HkUW4bJn0VWdf/a7nDpj1u++PBOR694+Ftj/8PKNdnDLn/V8YAAAAASUVORK5CYII='
+#-------------------------------------------------------------------
+def busca_url_chat():
+    arquivo = open("C:/Totem/TelemedicinaUnimedCriciuma.conf",'r')
+    linha = arquivo.readline()
+    
+    if linha == '':
+        linha = 'https://www.unimedcriciuma.com.br'
+
+    arquivo.close() 
+    return linha
 #-------------------------------------------------------------------
 def display_notification(message):
     title = 'Telemedicina Unimed Criciúma'
@@ -67,8 +72,9 @@ class abreNavegador(threading.Thread):
         self.close
 
     def run(self):
-        #navegador = wb.open(URL_CHAT,1,True)
-        navegador = system(START_CHROME)
+        #Burcar a URL do Webchat conforme a config do arquivo
+        start_chrome = "powershell -WindowStyle Hidden Start-Process chrome.exe -ArgumentList @( '-incognito', '" + busca_url_chat() + "' )"
+        navegador = system(start_chrome)
 #-------------------------------------------------------------------
 def fecha_navegador():
     lista = []
@@ -103,7 +109,7 @@ def encerrar_atendimento():
     notificacao["-GRAPH-"].draw_rectangle((0, 0), (-win_width, -win_height), fill_color=FUNDO_VERDE, line_color=FUNDO_VERDE)
     notificacao.set_alpha(100)
     encerrarAtendimento = False
-
+    
     #Loop do tempo de atendimento
     while True:
         event = notificacao.read(timeout=TEMPO_TOTAL_ATENDIMENTO) 
@@ -116,7 +122,7 @@ def encerrar_atendimento():
             encerrarAtendimento = False                
             notificacao.close()
             break
-
+    
     return encerrarAtendimento
 # -------------------------------------------------------------------
 def main():
@@ -129,7 +135,7 @@ def main():
                             [sg.Text(' ')],                                      
                             [sg.Text(' ')], 
                             [sg.Text(' ')],                                      
-                            [sg.Button('Iniciar Atendimento', image_data=imagemBotaoVerde, font='Helvetica 22 bold italic', button_color=('white', sg.theme_background_color()),border_width=0, )],
+                            [sg.Button('Iniciar Atendimento', image_data=imagemBotaoVerde, font='Helvetica 22 bold italic', button_color=('white', sg.theme_background_color()),border_width=0,key="BotaoIniciar" )],
                             [sg.Text(' ')],   
                             [sg.Text(' ')],   
                             [sg.Text(' ')], 
@@ -140,7 +146,6 @@ def main():
                             [sg.Text(' ')],                            
                             [sg.Image(filename="C:/Totem/logo_transparente.png")],
                         ]
-
     layoutPrincipal = layoutPrincipal = [[sg.Sizer(0,1366), sg.Column([[sg.Sizer(768,0)]] + layoutPrincipal, element_justification='c', pad=(0,0))]]
     janelaPrincipal = sg.Window('Telemedicina Unimed Criciúma', 
                                 layoutPrincipal, 
@@ -149,16 +154,21 @@ def main():
                                 no_titlebar=True,
                                 finalize=True,
                                 right_click_menu=sg.MENU_RIGHT_CLICK_EXIT)
+
     janelaPrincipal.maximize()
 
     #Loop principal
     while True:
+        janelaPrincipal['BotaoIniciar'].update(disabled=False)
+
         event, values = janelaPrincipal.read()
-        
+
+        janelaPrincipal['BotaoIniciar'].update(disabled=True)
+
         if event == sg.WIN_CLOSED or event == 'Exit':
             break
 
-        if event == 'Iniciar Atendimento':            
+        if event == 'BotaoIniciar':
             background = abreNavegador()
             background.start()
             display_notification('Iniciando Atendimento...')
@@ -214,7 +224,6 @@ def main():
                     display_notification('Encerrando Atendimento...')
                     continuar = False
                     fecha_navegador()
-                    
 # -------------------------------------------------------------------
 if __name__ == '__main__':    
     #Botões Grandes
