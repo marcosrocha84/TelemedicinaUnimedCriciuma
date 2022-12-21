@@ -3,23 +3,27 @@
 ##### Aplicação para autoatendimento dos totens de Telemedicina #####
 #-------------------------------------------------------------------#
 # Autor.: Marcos Rocha                                              #
-# Data..: 20/12/2022                                                #    
-# Versão: 1.3                                                       #
+# Data..: 21/12/2022                                                #    
+# Versão: 1.4                                                       #
 #-------------------------------------------------------------------#
 import PySimpleGUI as sg
 import textwrap
 import threading
 from os import system
 import psutil as ps
-import webbrowser as wb
 #-------------------------------------------------------------------
+MENSAGEM_INICIANDO   = 'Iniciando atendimento'
+MENSAGEM_AGUARDE     = 'Por favor, aguarde'
+MENSAGEM_ENCERRANDO  = 'Encerrando atendimento'
+MENSAGEM_FINALIZANDO = 'Finalizando atendimento'
+MENSAGEM_OBRIGADO    = 'Obrigado 💚'
 WIN_MARGIN = 60
 FUNDO_VERDE = "#033c1e"
 FUNDO_CINZA = "#363636"
 TEXT_COLOR = "#ffffff"
 TEMPO_CONFIRMAR_FINALIZAR = 60000 # 1 minuto
 TEMPO_TOTAL_ATENDIMENTO = 1800 * 1000 #30 minutos
-ICONE_INICIANDO = b'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAA3NCSVQICAjb4U/gAAAACXBIWXMAAAEKAAABCgEWpLzLAAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAAAHJQTFRF////ZsxmbbZJYL9gZrtVar9VZsJcbMRYaMZVasFYaL9XbMFbasRZaMFZacRXa8NYasFaasJaasFZasJaasNZasNYasJYasJZasJZasJZasJZasJZasJYasJZasJZasJZasJZasJaasJZasJZasJZasJZ2IAizQAAACV0Uk5TAAUHCA8YGRobHSwtPEJJUVtghJeYrbDByNjZ2tvj6vLz9fb3/CyrN0oAAADnSURBVDjLjZPbWoUgFIQnbNPBIgNKiwwo5v1fsQvMvUXI5oqPf4DFOgCrhLKjC8GNVgnsJY3nKm9kgTsduVHU3SU/TdxpOp15P7OiuV/PVzk5L3d0ExuachyaTWkAkLFtiBKAqZHPh/yuAYSv8R7XE0l6AVXnwBNJUsE2+GMOzWL8k3OEW7a/q5wOIS9e7t5qnGExvF5Bvlc4w/LEM4Abt+d0S5BpAHD7seMcf7+ZHfclp10TlYZc2y2nOqc6OwruxUWx0rDjNJtyp6HkUW4bJn0VWdf/a7nDpj1u++PBOR694+Ftj/8PKNdnDLn/V8YAAAAASUVORK5CYII='
+ICONE_INICIANDO = b'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'
 #-------------------------------------------------------------------
 def busca_url_chat():
     arquivo = open("C:/Totem/TelemedicinaUnimedCriciuma.conf",'r')
@@ -31,23 +35,19 @@ def busca_url_chat():
     arquivo.close() 
     return linha
 #-------------------------------------------------------------------
-def display_notification(message):
+def display_notification(mensagem1, mensagem2):
     title = 'Telemedicina Unimed Criciúma'
     alpha = 0.9
-    message = textwrap.fill(message, 50)
-    win_msg_lines = message.count("\n") + 1
-    screen_res_x, screen_res_y = sg.Window.get_screen_size()
-    win_margin = WIN_MARGIN  # distance from screen edges
-    win_width, win_height = 370, 66 + (14.8 * win_msg_lines)
-    win_location = (199, screen_res_y/2 - win_height - win_margin)
+    win_width, win_height = 468, 110
+    win_location = (130, 600)
 
     layout = [[sg.Graph(canvas_size=(win_width, win_height), graph_bottom_left=(0, win_height), graph_top_right=(win_width, 0), key="-GRAPH-", background_color=FUNDO_CINZA, enable_events=True)]]
 
     window = sg.Window(title, layout, background_color=FUNDO_CINZA, no_titlebar=True, location=win_location, keep_on_top=True, alpha_channel=0, margins=(0, 0), element_padding=(0, 0), finalize=True)
     window["-GRAPH-"].draw_rectangle((win_width, win_height), (-win_width, -win_height), fill_color=FUNDO_CINZA, line_color=FUNDO_CINZA)
-    window["-GRAPH-"].draw_text(title, location=(64, 20), color=TEXT_COLOR, font=("Arial", 12, "bold"), text_location=sg.TEXT_LOCATION_TOP_LEFT)
-    window["-GRAPH-"].draw_text(message, location=(64, 44), color=TEXT_COLOR, font=("Arial", 9), text_location=sg.TEXT_LOCATION_TOP_LEFT)
-    window["-GRAPH-"].draw_image(data=ICONE_INICIANDO, location=(20, 20))
+    window["-GRAPH-"].draw_text(mensagem1, location=(70, 20), color=TEXT_COLOR, font=("Arial", 20, "bold"), text_location=sg.TEXT_LOCATION_TOP_LEFT)
+    window["-GRAPH-"].draw_text(mensagem2, location=(70, 60), color=TEXT_COLOR, font=("Arial", 20, "bold"), text_location=sg.TEXT_LOCATION_TOP_LEFT)
+    window["-GRAPH-"].draw_image(data=ICONE_INICIANDO, location=(20, 40))
     
     for i in range(1,int(alpha*100)):               # fade in
         window.set_alpha(i/100)
@@ -74,7 +74,7 @@ class abreNavegador(threading.Thread):
     def run(self):
         #Burcar a URL do Webchat conforme a config do arquivo
         start_chrome = "powershell -WindowStyle Hidden Start-Process chrome.exe -ArgumentList @( '-incognito', '" + busca_url_chat() + "' )"
-        navegador = system(start_chrome)
+        system(start_chrome)
 #-------------------------------------------------------------------
 def fecha_navegador():
     lista = []
@@ -97,7 +97,6 @@ def encerrar_atendimento():
     win_msg_lines = message.count("\n") + 1
     win_margin = WIN_MARGIN
     win_width, win_height = 364, 66 + (14.8 * win_msg_lines)
-    win_location = (win_width - win_margin, win_height - win_margin)
     largura, altura = sg.Window.get_screen_size()
 
     layout =[  
@@ -171,7 +170,7 @@ def main():
         if event == 'BotaoIniciar':
             background = abreNavegador()
             background.start()
-            display_notification('Iniciando Atendimento...')
+            display_notification(MENSAGEM_INICIANDO, MENSAGEM_AGUARDE)
             continuar = True
 
             #Loop do atendimento iniciado
@@ -206,7 +205,7 @@ def main():
                         
                     if event[0] == 'Finalizar':                                        
                         continuar = False                    
-                        display_notification('Finalizando Atendimento...')
+                        display_notification(MENSAGEM_FINALIZANDO, MENSAGEM_OBRIGADO)
                         notificacao.close()
                         fecha_navegador()
 
@@ -216,12 +215,12 @@ def main():
 
                     if event[0] == sg.TIMEOUT_KEY:                    
                         continuar = False
-                        display_notification('Encerrando Atendimento...')
+                        display_notification(MENSAGEM_ENCERRANDO, MENSAGEM_OBRIGADO)
                         notificacao.close()
                         fecha_navegador()
                         
                 else:
-                    display_notification('Encerrando Atendimento...')
+                    display_notification(MENSAGEM_ENCERRANDO, MENSAGEM_OBRIGADO)
                     continuar = False
                     fecha_navegador()
 # -------------------------------------------------------------------
