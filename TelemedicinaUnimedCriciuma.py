@@ -4,7 +4,7 @@
 #-------------------------------------------------------------------#
 # Autor.: Marcos Rocha                                              #
 # Data..: 21/12/2022                                                #    
-# Versão: 1.4                                                       #
+# Versão: 1.5                                                       #
 #-------------------------------------------------------------------#
 import PySimpleGUI as sg
 import textwrap
@@ -73,7 +73,7 @@ class abreNavegador(threading.Thread):
 
     def run(self):
         #Burcar a URL do Webchat conforme a config do arquivo
-        start_chrome = "powershell -WindowStyle Hidden Start-Process chrome.exe -ArgumentList @( '-incognito', '" + busca_url_chat() + "' )"
+        start_chrome = "powershell -WindowStyle Hidden Start-Process chrome.exe -ArgumentList @( '--start-fullscreen -incognito " + busca_url_chat() + "' )"
         system(start_chrome)
 #-------------------------------------------------------------------
 def fecha_navegador():
@@ -100,11 +100,11 @@ def encerrar_atendimento():
     largura, altura = sg.Window.get_screen_size()
 
     layout =[  
-                [sg.Graph(canvas_size=(largura, 12), graph_bottom_left=(0, win_height), graph_top_right=(win_width, 0), key="-GRAPH-", background_color=FUNDO_VERDE, enable_events=True)],
+                [sg.Graph(canvas_size=(largura, 2), graph_bottom_left=(0, win_height), graph_top_right=(win_width, 0), key="-GRAPH-", background_color=FUNDO_VERDE, enable_events=True)],
                 [sg.Button('ENCERRAR', image_data=imagemBotaoVermelho, font='Helvetica 30 bold italic', button_color=('white', FUNDO_VERDE),border_width=0, )]
             ]
 
-    notificacao = sg.Window('', layout, background_color=FUNDO_VERDE, no_titlebar=True, location=(0,0), keep_on_top=True, alpha_channel=0, margins=(0, 0), element_padding=(0, 0), finalize=True)
+    notificacao = sg.Window('', layout, background_color=FUNDO_VERDE, no_titlebar=True, location=(385,0), keep_on_top=True, alpha_channel=0, margins=(0, 0), element_padding=(0, 0), finalize=True)
     notificacao["-GRAPH-"].draw_rectangle((0, 0), (-win_width, -win_height), fill_color=FUNDO_VERDE, line_color=FUNDO_VERDE)
     notificacao.set_alpha(100)
     encerrarAtendimento = False
